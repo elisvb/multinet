@@ -1,25 +1,16 @@
-source('R/reading.R', encoding = 'UTF-8') 
-dir <- 'data'                                                   # dump all txt files from multinet here                                           
+# step 1: define the name of the directory in which all txt files are going to be dumped
+dir <- 'data'                                                   # name of data folder                                         
+dir.create(dir,showWarnings = FALSE)                            # will create that folder for you, if it doesn't exist already
 
+# step 2: outside R, copy all your data files here
+
+# step 3: let R know the names of those files
 files <- dir(dir, pattern = ".txt",full.names=TRUE)             # get the names of all text files
 
-## read in meta data (summary statistics for all files)
-meta <- read.multimeta(files,tz=Sys.timezone())        # this presumes the correct time zone of the files is your laptop one!!! change tz if not                   
+# step 4: read them into R
+meta <- read.multimeta(files,tz=Sys.timezone(),plot=TRUE)        # use plot=FALSE if you do not want to see what lines were selected to calculate e.g. volume.                 
+View(meta)                                                       # have a preview to see everything is ok                         
 
-    # add extra columns if necessary
-    meta$`Data Start UTC` <- meta$`Data Start`         # a new column with a different time zone if you want
-    attr(meta$`Data Start UTC`, "tzone") <- "utc"
-    meta$`Data End UTC` <- meta$`Data End`             # a new column with a different time zone if you want
-    attr(meta$`Data End UTC`, "tzone") <- "utc"
-    
-    meta$Date <- as.Date(meta$`Data Start`)            # add a column with only date
-
-## read in raw data (the data without the header information)
-dat <- read.multidat(files)                                 
-
-## merge the meta data and the raw data if you want everything
-all <- merge(meta,dat)                                             
-
-## save only the metadata as csv
+## step 5: save data ascsv
 write.csv(meta,file='csv/multinet.csv',row.names = FALSE)
 
