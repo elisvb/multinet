@@ -12,21 +12,21 @@ read.multimeta <- function(file,tz='utc',plot=FALSE){
         if(!grepl('Data Start: ',d[1])) stop('x is not a multinet dat file')    # if the first is wrong, some wrong file format
         
         cols <- c('Data Start','Date ','Time UTC','Cruise','Ship','Station','Consecutive','Bottom depth','Day/Night','Latitude','Longitude') # columns we want
-        id.cols <- unlist(sapply(cols,grep,d))                                                            # line numbers of those columns
+        id.cols <- unlist(sapply(cols,grep,d,ignore.case=TRUE))                # line numbers of those columns
+        id.cols <- id.cols[id.cols < grep('Notes',d)]         # exclude lines after the notes (in case they contain a string in cols)
         
         sub <- d[id.cols]                                      # take only those lines
         sub <- gsub('\t',' ',sub)                              # small correction for when whitespaces are read in as \t
-        sub <- sub[grep(paste(cols,collapse = '|'),sapply(strsplit(sub,': '),'[',1))] # if any of the columns names accidentally ocures in the notes/comments, this will remove this line
-        sub <- sapply(strsplit(sub,': '),'[',2)                # keep the stuff after :
-        sub <- trimws(sub)                                     # remove white spaces before and after
+        sub2 <- sapply(strsplit(sub,': '),'[',2)              # keep the stuff after ": "
+        if(any(is.na(sub2))) sub2[which(is.na(sub2))] <- sapply(strsplit(sub[which(is.na(sub2))],':'),'[',2)  # if there is a line with no space after :, correct his
+        sub2 <- trimws(sub2)                                     # remove white spaces before and after
         
-        dat <- data.frame(matrix(sub,nrow=1))                  # convert this to a data.frame
+        dat <- data.frame(matrix(sub2,nrow=1))                  # convert this to a data.frame
         names(dat) <- cols
         
         dat$filename <- x                                      # for tractability and merging with rest of data if necessary
         
         dat[,1] <- as.POSIXct(dat[,1],tz=tz)                   # correct class
-        dat[,7] <- as.numeric(dat[,7])                         # correct class
         
         ## all need to be in UTC
         ## net = 0 needs to be removed.
@@ -42,8 +42,8 @@ read.multimeta <- function(file,tz='utc',plot=FALSE){
         check.diving <- data.frame(unclass(rle(raw$`Pressure [dbar]`>=0)))  # table with seconds when diving (below surface) and when its not
         start.id <- which(check.diving$values==TRUE & check.diving$lengths==max(check.diving[check.diving$values,]$lengths)) # identify when the longest continuous dive is
         start <- sum(check.diving[0:(start.id-1),'lengths'])+1  # row where the dive starts
-        end <- sum(check.diving[1:(start.id),'lengths'])+1  # row where the dive ends
-        raw.dive <- raw[c(start:end),]                       # select only rows when diving
+        end <- sum(check.diving[1:(start.id),'lengths'])        # row where the dive ends
+        raw.dive <- raw[c(start:end),]                          # select only rows when diving
 
         # start
         raw.dive <- raw.dive[raw.dive$`Net []`!=0,]
