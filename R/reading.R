@@ -5,6 +5,7 @@
 ##' @import data.table
 ##' @details ...
 read.multimeta <- function(file,tz='utc',plot=FALSE){
+    require(data.table)                                         # delete if packaged
     ret <- lapply(file,function(x){
         print(x)
         d <- readLines(x)                                                       # read all lines as vector elements
@@ -69,6 +70,7 @@ read.multimeta <- function(file,tz='utc',plot=FALSE){
 ##' @import data.table
 ##' @details ...
 read.multidat <- function(file){
+    require(data.table)                                         # delete if packaged
     ret <- lapply(file,function(x){
         d <- readLines(x)                                                       # read all lines as vector elements
         if(!grepl('Data Start: ',d[1])) stop('x is not a multinet dat file')    # if the first is wrong, some wrong file format
