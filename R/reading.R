@@ -2,9 +2,10 @@
 ##' @param x vector of text file names from oceanLabs (character)
 ##' @param tz time zone (character, UTC by default)
 ##' @param plot logical. plot selected depths?
+##' @param min.dive.depth default 5. minimum depth (meters) for a dive to be recognised as a dive (rather than surface troubles)
 ##' @import data.table
 ##' @details ...
-read.multimeta <- function(file,tz='utc',plot=FALSE){
+read.multimeta <- function(file,tz='utc',plot=FALSE,min.dive.depth=5){
     require(data.table)                                         # delete if packaged
     ret <- lapply(file,function(x){
         print(x)
@@ -13,41 +14,59 @@ read.multimeta <- function(file,tz='utc',plot=FALSE){
         
         cols <- c('Data Start','Date ','Time UTC','Cruise','Ship','Station','Consecutive','Bottom depth','Day/Night','Latitude','Longitude') # columns we want
         id.cols <- unlist(sapply(cols,grep,d,ignore.case=TRUE))                # line numbers of those columns
-        id.cols <- id.cols[id.cols < grep('Notes',d)]         # exclude lines after the notes (in case they contain a string in cols)
+        id.cols <- id.cols[id.cols < grep('Notes',d)]                          # Because any of the column names might be in the notes, exclude them and add notes after separately. 
+        id.cols <- c(id.cols,grep('Notes:',d))                                 # add the notes
+        names(id.cols)[length(id.cols)] <- 'Notes'                              # column name for notes
         
         sub <- d[id.cols]                                      # take only those lines
         sub <- gsub('\t',' ',sub)                              # small correction for when whitespaces are read in as \t
-        sub2 <- sapply(strsplit(sub,': '),'[',2)              # keep the stuff after ": "
+        sub2 <- sapply(strsplit(sub,': '),'[',2)               # keep the stuff after ": "
         if(any(is.na(sub2))) sub2[which(is.na(sub2))] <- sapply(strsplit(sub[which(is.na(sub2))],':'),'[',2)  # if there is a line with no space after :, correct his
         sub2 <- trimws(sub2)                                     # remove white spaces before and after
         
         dat <- data.frame(matrix(sub2,nrow=1))                  # convert this to a data.frame
-        names(dat) <- cols
+        names(dat) <- names(id.cols)
         
         dat$filename <- x                                      # for tractability and merging with rest of data if necessary
         
         dat[,1] <- as.POSIXct(dat[,1],tz=tz)                   # correct class
-        
-        ## all need to be in UTC
-        ## net = 0 needs to be removed.
-        ## delete all depths negative before calcs.
-        ## volume:volume at depth max, minus the volume at negative depths.
-        ## delete negatives untill consistent line of positives (if it replunges it does nto count)
-        
+
         raw  <- read.multidat(x)                             # read in the table and extract info by net
         raw$id <- 1:nrow(raw)
         
-        # remove lines where not diving (before or after)
-        if(plot) plot(raw$id,raw$`Pressure [dbar]`,main=x,xlab='time',ylab='depth')
-        check.diving <- data.frame(unclass(rle(raw$`Pressure [dbar]`>=0)))  # table with seconds when diving (below surface) and when its not
-        start.id <- which(check.diving$values==TRUE & check.diving$lengths==max(check.diving[check.diving$values,]$lengths)) # identify when the longest continuous dive is
-        start <- sum(check.diving[0:(start.id-1),'lengths'])+1  # row where the dive starts
-        end <- sum(check.diving[1:(start.id),'lengths'])        # row where the dive ends
-        raw.dive <- raw[c(start:end),]                          # select only rows when diving
+        # remove the 0 net and any other one that is going down (e.g. sometimes the third net if two dives)
+        upd <- tapply(raw$`Pressure [dbar]`, raw$`Net []`, function(x){ifelse(x[1]>x[length(x)],'up','down')}) # nets up or down
+        raw$updown <- upd[raw$`Net []`+1]                                                                      # add to dataframe
+        raw.dive <- raw[raw$updown=='up',]                                                                     # keep only the descending ones
+        
+        # remove nets that were opened and closed at the surface (shallower than min.dive.depth)
+        depth.max <- tapply(raw.dive$`Pressure [dbar]`, raw.dive$`Net []`, max) 
+        nets.max <- as.numeric(names(depth.max[depth.max>min.dive.depth]))
+        raw.dive <- raw.dive[raw.dive$`Net []` %in% nets.max,] 
+        
+        # remove above surface
+        raw.dive <- raw.dive[raw.dive$`Pressure [dbar]`>=0,]
+        
+        # remove when the net went down a bit after having surfaced
+        replunge <- tapply(raw.dive$id, raw.dive$`Net []`, function(x){ifelse(length(unique(diff(x)))==1,FALSE,TRUE)}) # did this happen for any net?
+        if(any(replunge)){                                                                                                                  # if this happens
+            for(i in as.numeric(names(replunge[replunge]))){                                                                                # for those nets , delete the second time below water
+                y <- diff(raw.dive[raw.dive$`Net []`==i,"id"])                                                                              # where is there a jump
+                toremove <- which(y>1)[1]                                                                                                      # start of the jump
+                toremove <- c(toremove:length(y))+1                                                                                         # start till end
+                toremove <- raw.dive[raw.dive$`Net []`==i,][toremove,]$id                                                                   # id of those lines
+                raw.dive <- raw.dive[!raw.dive$id %in% toremove,]                                                                           # delete them
+            }
+        }
 
-        # start
-        raw.dive <- raw.dive[raw.dive$`Net []`!=0,]
-        if(plot) points(raw.dive$id,raw.dive$`Pressure [dbar]`,col='red')
+        # plots
+        if(plot){
+            plot(raw$id,-raw$`Pressure [dbar]`,main=x,xlab='time',ylab='depth',pch=16)
+            colfunc <- colorRampPalette(c("red","green"))
+            nets <- unique(raw.dive$`Net []`)
+            thesecols <- colfunc(length(nets))
+            for(i in nets) points(raw.dive[raw.dive$`Net []`==i,]$id,-raw.dive[raw.dive$`Net []`==i,]$`Pressure [dbar]`,col=thesecols[which(nets==i)],pch=16)
+         } 
         
         # calculate some basic statistics
         extra  <- data.frame(
@@ -59,7 +78,7 @@ read.multimeta <- function(file,tz='utc',plot=FALSE){
             Volume      = tapply(raw.dive$`Volume [m³]`, raw.dive$`Net []`, max)) # total volume filtered
         
         dat <- cbind(dat,extra)
-        if(ncol(dat)!=18) warning(paste0('missing column/information for file: ',x))
+        if(ncol(dat)!=19) warning(paste0('missing column/information for file: ',x))
         return(dat)
     })
     as.data.frame(rbindlist(ret))
