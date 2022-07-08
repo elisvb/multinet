@@ -24,8 +24,9 @@ dir.create(dir,showWarnings = FALSE)                            # will create th
 # step 3: let R know the names of those files
 files <- dir(dir, pattern = ".txt",full.names=TRUE)             # get the names of all text files
 
-par(mfrow=c(4,4))
+
 # step 4: read them into R
+par(mfrow=c(4,4))                                               # to have multiple plots on same page if you want
 meta <- read.multimeta(files,tz=Sys.timezone(),plot=TRUE,min.dive.depth=5)  # use plot=FALSE if you do not want to see what lines were selected to calculate e.g. volume.                 
 View(meta)                                                       # have a preview to see everything is ok                         
 
