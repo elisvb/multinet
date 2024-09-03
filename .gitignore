@@ -2,8 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
-IML2021_PMZA_spring/*.txt
-IML2022_PMZA_spring/*.txt
-IML2024_PMZA_spring/*.txt
+data/IML2021_PMZA_spring/*.txt
+data/IML2022_PMZA_spring/*.txt
+data/IML2024_PMZA_spring/*.txt
 csv/*.csv
 
