@@ -11,3 +11,5 @@ Summary statistics for each net are calculated after exclusion of:
 When reading in the data, a plot can be shown with colored dots indicating the selected data for each net.
 
 Not packaged.
+
+Multinet data location: S:\Zooplancton\Applications - Logiciels\HydroBios OceanLab 3.5.5.4\Extraction metadata OceanLab

@@ -16,7 +16,7 @@ invisible(sapply(list.files(pattern="[.]R$", path="R/", full.names=TRUE), source
 ## DO the actual thing ------------------------------------
 
 # step 1: define the name of the directory in which all txt files are going to be dumped
-dir <- 'data/IML2022_PMZA_spring'                                                   # name of data folder                                         
+dir <- 'data/IML2024_PMZA_spring'                                                   # name of data folder                                         
 dir.create(dir,showWarnings = FALSE)                            # will create that folder for you, if it doesn't exist already
 
 # step 2: outside R, copy all your data files here
