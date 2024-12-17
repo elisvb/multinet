@@ -16,8 +16,9 @@ read.multimeta <- function(file,tz='utc',plot=FALSE,min.dive.depth=5,encoding="l
         cols <- c('Data Start','Date ','Time UTC','Cruise','Ship','Station','Consecutive','Bottom depth','Day/Night','Latitude','Longitude') # columns we want
         maxchar <- max(nchar(cols))
         id.cols <- unlist(sapply(cols,grep,substr(d,1,maxchar),ignore.case=TRUE))   # line numbers of those columns
-        id.cols <- id.cols[id.cols < grep('Notes',d)]                          # Because any of the column names might be at the start of the notes, exclude them and add notes after separately. 
-        id.cols <- c(id.cols,Notes=grep('Notes:',d))                           # add the notes
+        id.cols <- id.cols[id.cols < grep('Notes',d)[1]]                          # Because any of the column names might be at the start of the notes, exclude them and add notes after separately. 
+        id.cols <- c(id.cols,Notes=grep('Notes:',d)[1])                           # add the notes
+        coln <- trimws(gsub('[0-9]+', '', names(id.cols)))
         
         sub <- d[id.cols]                                      # take only those lines
         sub <- gsub('\t',' ',sub)                              # small correction for when whitespaces are read in as \t
@@ -26,7 +27,7 @@ read.multimeta <- function(file,tz='utc',plot=FALSE,min.dive.depth=5,encoding="l
         sub2 <- trimws(sub2)                                     # remove white spaces before and after
         
         dat <- data.frame(matrix(sub2,nrow=1))                  # convert this to a data.frame
-        names(dat) <- names(id.cols)
+        names(dat) <- coln
         
         dat$filename <- x                                      # for tractability and merging with rest of data if necessary
         
@@ -98,8 +99,8 @@ read.multidat <- function(file,encoding="latin1"){
         
         id.header <- grep('Time.*Pressure.*Volume',d)                           # this is the line where the table starts
         
-        dat <- read.table(x,skip=id.header-1,sep='\t',header=TRUE,encoding = encoding)              # read the raw data
-        names(dat) <- unlist(strsplit(readLines(x, encoding=encoding)[id.header],'\t'))            # pretty column names
+        dat <- read.table(x,skip=id.header-1,sep='\t',header=TRUE,fileEncoding = encoding,fill=TRUE)              # read the raw data
+        names(dat) <- unlist(strsplit(d[id.header],'\t'))            # pretty column names
         dat$filename <- x                                                       # for tractability and merging with rest of data if necessary
         
         return(dat)

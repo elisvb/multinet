@@ -16,7 +16,7 @@ invisible(sapply(list.files(pattern="[.]R$", path="R/", full.names=TRUE), source
 ## DO the actual thing ------------------------------------
 
 # step 1: define the name of the directory in which all txt files are going to be dumped
-dir <- 'data/IML2024_PMZA_spring'                                                   # name of data folder                                         
+dir <- 'data/IML2022_PMZA_spring'                                                   # name of data folder                                         
 dir.create(dir,showWarnings = FALSE)                            # will create that folder for you, if it doesn't exist already
 
 # step 2: outside R, copy all your data files here
@@ -31,5 +31,5 @@ meta <- read.multimeta(files,tz=Sys.timezone(),plot=TRUE,min.dive.depth=5)  # us
 View(meta)                                                       # have a preview to see everything is ok                         
 
 ## step 5: save data ascsv
-write.csv(meta,file='csv/multinet.csv',row.names = FALSE)
+write.csv(meta,file='csv/multinet2024.csv',row.names = FALSE)
 
